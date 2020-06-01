@@ -57,7 +57,7 @@ func (s *Server) CreateAccount(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": model})
+	c.JSON(http.StatusCreated, model)
 }
 
 // FindAccount controller find account by ID
@@ -118,7 +118,7 @@ func (s *Server) CreateTx(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"data": model})
+	c.JSON(http.StatusCreated, model)
 }
 
 // FindAllTxsByAccount controller find all txs by account ID

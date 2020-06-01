@@ -62,7 +62,7 @@ func main() {
 		s.Models = append(s.Models,
 			&models.Account{},
 			&models.OprType{},
-			models.Transaction{},
+			&models.Transaction{},
 		)
 		s.DB = database.NewGormRepo(d)
 	}

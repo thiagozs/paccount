@@ -71,7 +71,7 @@ func (s *Server) seedOprType() {
 		"SAQUE",
 		"PAGAMENTO",
 	}
-	for i, v := range desc {
+	for _, v := range desc {
 		oprt := models.OprType{Description: v}
 		var model models.OprType
 		_ = s.DB.FindOne(oprt, &model)
@@ -84,7 +84,7 @@ func (s *Server) seedOprType() {
 			if err := s.DB.Create(&oprt); err != nil {
 				panic(err)
 			}
-			s.OprType[uint64(i)] = v
+			s.OprType[uint64(oprt.ID)] = oprt.Description
 		} else {
 			s.OprType[model.ID] = model.Description
 		}

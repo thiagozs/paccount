@@ -48,8 +48,9 @@ func (s *Server) CreateAccount(c *gin.Context) {
 	timeStamp := time.Now()
 	model := &models.Account{
 		DocNumber: input.DocNumber,
+		Limit:     input.Limit,
 		CreatedAt: int32(timeStamp.Unix()),
-		UpdatedAt: int32(timeStamp.Unix()),
+		//UpdatedAt: int32(timeStamp.Unix()),
 	}
 
 	if err := s.DB.Create(model); err != nil {
@@ -100,12 +101,41 @@ func (s *Server) CreateTx(c *gin.Context) {
 		return
 	}
 
+	var acc models.Account
+	if err := s.DB.FindOne(models.Account{ID: input.AccountID}, &acc); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if input.OperationID < 4 && input.Amount > acc.Limit {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "account not have a limit"})
+		return
+	}
+
+	//fmt.Printf("%#v\n", acc)
+
 	if _, ok := s.OprType[input.OperationID]; !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "operation type not exist"})
 		return
 	}
 
+	switch input.OperationID {
+	case 1, 2, 3:
+		// -
+		acc.Limit -= input.Amount
+	case 4:
+		// +
+		acc.Limit += input.Amount
+	}
 	timeStamp := time.Now()
+	//acc.UpdatedAt = int32(timeStamp.Unix())
+
+	if err := s.DB.Update(acc); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	timeStamp = time.Now()
 	model := &models.Transaction{
 		Amount:      input.Amount,
 		OperationID: input.OperationID,

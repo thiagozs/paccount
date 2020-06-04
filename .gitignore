@@ -2,3 +2,4 @@
 *.txt
 out
 out/*
+.vscode/*

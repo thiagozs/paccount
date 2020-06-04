@@ -50,7 +50,7 @@ func (s *Server) CreateAccount(c *gin.Context) {
 		DocNumber: input.DocNumber,
 		Limit:     input.Limit,
 		CreatedAt: int32(timeStamp.Unix()),
-		//UpdatedAt: int32(timeStamp.Unix()),
+		UpdatedAt: int32(timeStamp.Unix()),
 	}
 
 	if err := s.DB.Create(model); err != nil {
@@ -128,7 +128,7 @@ func (s *Server) CreateTx(c *gin.Context) {
 		acc.Limit += input.Amount
 	}
 	timeStamp := time.Now()
-	//acc.UpdatedAt = int32(timeStamp.Unix())
+	acc.UpdatedAt = int32(timeStamp.Unix())
 
 	if err := s.DB.Update(acc); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})

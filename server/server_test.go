@@ -61,27 +61,11 @@ func TestServerHandlerEndpoint(t *testing.T) {
 		code     int
 	}{
 		{
-			endpoint: "/transactions",
-			method:   "POST",
-			code:     201,
-			body:     `{"account_id":1,"amount":-1.005,"operation_id":4}`,
-			expected: `{"account_id":1,"amount":-1.005,"created_at":1590981025,"id":4,"operation_id":4}`,
-		},
-
-		{
-			endpoint: "/transactions/account/1",
-			method:   "GET",
-			code:     200,
-			body:     "",
-			expected: `[{"account_id":1,"amount":-1.005,"created_at":1590981025,"id":4,"operation_id":4}]`,
-		},
-
-		{
 			endpoint: "/accounts",
 			method:   "POST",
 			code:     201,
-			body:     `{"document_number":12312}`,
-			expected: `{"created_at":1590984657,"document_number":12312,"id":1,"updated_at":1590984657}`,
+			body:     `{"document_number":12312,"limit":100}`,
+			expected: `{"created_at":1590984657,"document_number":12312,"id":1,"limit":100,"updated_at":1590984657}`,
 		},
 
 		{
@@ -89,7 +73,23 @@ func TestServerHandlerEndpoint(t *testing.T) {
 			method:   "GET",
 			code:     200,
 			body:     "",
-			expected: `{"created_at":1590984657,"document_number":12312,"id":1,"updated_at":1590984657}`,
+			expected: `{"created_at":1590984657,"document_number":12312,"id":1,"limit":100,"updated_at":1590984657}`,
+		},
+
+		{
+			endpoint: "/transactions",
+			method:   "POST",
+			code:     201,
+			body:     `{"account_id":1,"amount":1,"operation_id":1}`,
+			expected: `{"account_id":1,"amount":1,"created_at":1590981025,"id":1,"operation_id":1}`,
+		},
+
+		{
+			endpoint: "/transactions/account/1",
+			method:   "GET",
+			code:     200,
+			body:     "",
+			expected: `[{"account_id":1,"amount":1.005,"created_at":1590981025,"id":4,"operation_id":4}]`,
 		},
 	}
 

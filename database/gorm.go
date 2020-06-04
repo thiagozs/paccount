@@ -26,6 +26,9 @@ type GormRepo struct {
 
 // NewGormRepo return a new drive instance
 func NewGormRepo(db *gorm.DB) IGormRepo {
+	db.LogMode(false)
+	db.Callback().Create().Remove("gorm:update_time_stamp")
+	db.Callback().Update().Remove("gorm:update_time_stamp")
 	return &GormRepo{DB: db}
 }
 

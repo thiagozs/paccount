@@ -1,10 +1,7 @@
 package server
 
 import (
-	"log"
 	"paccount/database"
-	"paccount/models"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -57,36 +54,4 @@ func (s *Server) MigrationDB() {
 func (s *Server) Run() error {
 	// forward runner
 	return s.Engine.Run(s.Port)
-}
-
-// Seeds fillup database with some registrys
-func (s *Server) Seeds() {
-	s.seedOprType()
-}
-
-func (s *Server) seedOprType() {
-	desc := []string{
-		"COMPRA A VISTA",
-		"COMPRA PARCELADA",
-		"SAQUE",
-		"PAGAMENTO",
-	}
-	for _, v := range desc {
-		oprt := models.OprType{Description: v}
-		var model models.OprType
-		_ = s.DB.FindOne(oprt, &model)
-
-		if (models.OprType{}) == model {
-			log.Printf("Seed :: OperationType add '%s'\n", v)
-			time := int32(time.Now().Unix())
-			oprt.CreatedAt = time
-			oprt.UpdatedAt = time
-			if err := s.DB.Create(&oprt); err != nil {
-				panic(err)
-			}
-			s.OprType[uint64(oprt.ID)] = oprt.Description
-		} else {
-			s.OprType[model.ID] = model.Description
-		}
-	}
 }

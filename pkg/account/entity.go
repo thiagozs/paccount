@@ -1,7 +1,7 @@
-package models
+package account
 
 // Account model structure
-type Account struct {
+type Entity struct {
 	ID        uint64  `json:"id" gorm:"primary_key"`
 	Limit     float64 `json:"limit" gorm:"type:real"`
 	DocNumber int32   `json:"document_number" gorm:"type:int;unique;not null;"`
@@ -10,6 +10,6 @@ type Account struct {
 }
 
 // TableName convention gorm ocr
-func (l Account) TableName() string {
+func (l Entity) TableName() string {
 	return "account"
 }

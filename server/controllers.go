@@ -2,9 +2,9 @@ package server
 
 import (
 	"net/http"
-	"paccount/models"
+	"paccount/pkg/account"
+	"paccount/pkg/transaction"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,7 +33,7 @@ func (s *Server) Ping(c *gin.Context) {
 // @Router /accounts [post]
 // @Param account body models.Account true "Account"
 func (s *Server) CreateAccount(c *gin.Context) {
-	var input models.Account
+	var input account.Entity
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -42,23 +42,16 @@ func (s *Server) CreateAccount(c *gin.Context) {
 	if input.DocNumber <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid number"})
 		return
-
 	}
 
-	timeStamp := time.Now()
-	model := &models.Account{
-		DocNumber: input.DocNumber,
-		Limit:     input.Limit,
-		CreatedAt: int32(timeStamp.Unix()),
-		UpdatedAt: int32(timeStamp.Unix()),
-	}
-
-	if err := s.DB.Create(model); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "can't create account"})
+	a := account.New(s.DB)
+	acc, err := a.Create(input)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "fail on create account"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, model)
+	c.JSON(http.StatusCreated, acc)
 }
 
 // FindAccount controller find account by ID
@@ -77,13 +70,15 @@ func (s *Server) FindAccount(c *gin.Context) {
 		return
 	}
 
-	var account models.Account
-	if err := s.DB.FindOne(models.Account{ID: uit}, &account); err != nil {
+	a := account.New(s.DB)
+	acc, err := a.Find(uit)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "record not found"})
 		return
+
 	}
 
-	c.JSON(http.StatusOK, account)
+	c.JSON(http.StatusOK, acc)
 }
 
 // CreateTx controller create new transaction
@@ -95,60 +90,20 @@ func (s *Server) FindAccount(c *gin.Context) {
 // @Router /transactions [post]
 // @Param transaction body models.Transaction true "Transaction"
 func (s *Server) CreateTx(c *gin.Context) {
-	var input models.Transaction
+	var input transaction.Entity
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	tx := transaction.New(s.DB)
 
-	var acc models.Account
-	if err := s.DB.FindOne(models.Account{ID: input.AccountID}, &acc); err != nil {
+	newtx, err := tx.ProcessTx(input)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if input.OperationID < 4 && input.Amount > acc.Limit {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "account not have a limit"})
-		return
-	}
-
-	//fmt.Printf("%#v\n", acc)
-
-	if _, ok := s.OprType[input.OperationID]; !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "operation type not exist"})
-		return
-	}
-
-	switch input.OperationID {
-	case 1, 2, 3:
-		// -
-		acc.Limit -= input.Amount
-	case 4:
-		// +
-		acc.Limit += input.Amount
-	}
-	timeStamp := time.Now()
-	acc.UpdatedAt = int32(timeStamp.Unix())
-
-	if err := s.DB.Update(acc); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		return
-	}
-
-	timeStamp = time.Now()
-	model := &models.Transaction{
-		Amount:      input.Amount,
-		OperationID: input.OperationID,
-		AccountID:   input.AccountID,
-		CreatedAt:   int32(timeStamp.Unix()),
-	}
-
-	if err := s.DB.Create(model); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "can't create transaction"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, model)
+	c.JSON(http.StatusCreated, newtx)
 }
 
 // FindAllTxsByAccount controller find all txs by account ID
@@ -167,13 +122,10 @@ func (s *Server) FindAllTxsByAccount(c *gin.Context) {
 		return
 	}
 
-	var model models.Transaction
-	var txs []models.Transaction
-
-	if err := s.DB.GetDB().Table(model.TableName()).
-		Where("account_id = ?", uit).
-		Find(&txs).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "record(s) not found"})
+	tx := transaction.New(s.DB)
+	txs, err := tx.GetAllTxs(uit)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 

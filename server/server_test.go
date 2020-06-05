@@ -7,7 +7,9 @@ import (
 	"net/http/httptest"
 	"os"
 	"paccount/database"
-	"paccount/models"
+	"paccount/pkg/account"
+	"paccount/pkg/oprtype"
+	"paccount/pkg/transaction"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,9 +26,9 @@ func setupTestCase(t *testing.T) (func(t *testing.T), database.IGormRepo) {
 	if err != nil {
 		t.Error(err)
 	}
-	d.AutoMigrate(&models.Account{},
-		&models.OprType{},
-		&models.Transaction{},
+	d.AutoMigrate(&account.Entity{},
+		&transaction.Entity{},
+		&oprtype.Entity{},
 	)
 
 	db := database.NewGormRepo(d)
@@ -57,14 +59,14 @@ func TestServerHandlerEndpoint(t *testing.T) {
 		endpoint string
 		expected string
 		method   string
-		body     string
+		payload  string
 		code     int
 	}{
 		{
 			endpoint: "/accounts",
 			method:   "POST",
 			code:     201,
-			body:     `{"document_number":12312,"limit":100}`,
+			payload:  `{"document_number":12312,"limit":100}`,
 			expected: `{"created_at":1590984657,"document_number":12312,"id":1,"limit":100,"updated_at":1590984657}`,
 		},
 
@@ -72,7 +74,7 @@ func TestServerHandlerEndpoint(t *testing.T) {
 			endpoint: "/accounts/1",
 			method:   "GET",
 			code:     200,
-			body:     "",
+			payload:  "",
 			expected: `{"created_at":1590984657,"document_number":12312,"id":1,"limit":100,"updated_at":1590984657}`,
 		},
 
@@ -80,16 +82,16 @@ func TestServerHandlerEndpoint(t *testing.T) {
 			endpoint: "/transactions",
 			method:   "POST",
 			code:     201,
-			body:     `{"account_id":1,"amount":1,"operation_id":1}`,
-			expected: `{"account_id":1,"amount":1,"created_at":1590981025,"id":1,"operation_id":1}`,
+			payload:  `{"account_id":1,"amount":-1,"operation_id":1}`,
+			expected: `{"account_id":1,"amount":-1,"balance":-1,"created_at":1590981025,"id":1,"operation_id":1}`,
 		},
 
 		{
 			endpoint: "/transactions/account/1",
 			method:   "GET",
 			code:     200,
-			body:     "",
-			expected: `[{"account_id":1,"amount":1.005,"created_at":1590981025,"id":4,"operation_id":4}]`,
+			payload:  "",
+			expected: `[{"account_id":1,"amount":1,"created_at":1590981025,"id":1,"operation_id":1}]`,
 		},
 	}
 
@@ -99,7 +101,6 @@ func TestServerHandlerEndpoint(t *testing.T) {
 	}
 
 	server := New(opts)
-	server.Seeds()
 	server.PublicRoutes()
 
 	for _, test := range tests {
@@ -107,10 +108,10 @@ func TestServerHandlerEndpoint(t *testing.T) {
 		t.Run(test.endpoint, func(t *testing.T) {
 
 			var w *httptest.ResponseRecorder
-			if test.body == "" {
+			if test.payload == "" {
 				w = performRequest(server.Engine, test.method, test.endpoint, nil)
 			} else {
-				w = performRequest(server.Engine, test.method, test.endpoint, strings.NewReader(test.body))
+				w = performRequest(server.Engine, test.method, test.endpoint, strings.NewReader(test.payload))
 			}
 
 			var response map[string]interface{}
@@ -118,25 +119,34 @@ func TestServerHandlerEndpoint(t *testing.T) {
 
 			var testErr error
 			var rtest map[string]interface{}
-			if test.body == "" {
-				testErr = json.Unmarshal([]byte(test.expected), &rtest)
-			} else {
-				testErr = json.Unmarshal([]byte(test.body), &rtest)
-			}
+			//if test.payload == "" {
+			testErr = json.Unmarshal([]byte(test.expected), &rtest)
+			//} else {
+			//testErr = json.Unmarshal([]byte(test.body), &rtest)
+			//}
 
 			switch test.endpoint {
 			case "/transactions":
+				delete(response, "updated_at")
 				delete(response, "created_at")
 				delete(response, "id")
 
+				delete(rtest, "updated_at")
+				delete(rtest, "created_at")
+				delete(rtest, "id")
+
+				// t.Logf("%#v\n", response)
+
 				assert.Nil(t, respErr)
 				assert.Nil(t, testErr)
-				assert.Equal(t, response, rtest)
-				assert.Equal(t, w.Code, test.code)
+				assert.Equal(t, rtest, response)
+				assert.Equal(t, test.code, w.Code)
 
-			case "/transactions/1":
+			case "/transactions/account/1":
 				body, errMarshal := json.Marshal(response)
 				bstr := strings.TrimSpace(string(body))
+
+				t.Logf("%#v\n", response)
 
 				assert.Nil(t, respErr)
 				assert.Nil(t, errMarshal)

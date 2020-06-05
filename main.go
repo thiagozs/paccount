@@ -6,7 +6,9 @@ import (
 	"log"
 	"os"
 	"paccount/database"
-	"paccount/models"
+	"paccount/pkg/account"
+	"paccount/pkg/oprtype"
+	"paccount/pkg/transaction"
 	"paccount/server"
 	"path/filepath"
 
@@ -60,16 +62,15 @@ func main() {
 		s.Port = *port
 		s.Debug = *debug
 		s.Models = append(s.Models,
-			&models.Account{},
-			&models.OprType{},
-			&models.Transaction{},
+			&account.Entity{},
+			&oprtype.Entity{},
+			&transaction.Entity{},
 		)
 		s.DB = database.NewGormRepo(d)
 	}
 
 	s := server.New(opts)
 	s.MigrationDB()
-	s.Seeds()
 	s.PublicRoutes()
 
 	if err := s.Run(); err != nil {
